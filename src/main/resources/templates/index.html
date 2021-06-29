@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" http-equiv="CONTENT-TYPE" content="text/html; charset=UTF-8"/>
+    <title>Конвертация валют</title>
+    <link href="webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet"/>
+    <script>
+        var rate = 0;
+        const host = 'http://localhost:8091';
+
+        async function getRate() {
+            let date = document.getElementById("dates").value;
+            let currencyFrom = document.getElementById('currencyFrom').value;
+            let currencyTo = document.getElementById('currencyTo').value;
+            let url = host + '/get-rate?date=' + date + '&currencyFrom=' + currencyFrom + '&currencyTo=' + currencyTo;
+            let response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            response.text().then(function (text) {
+                rate = text;
+            });
+            document.getElementById('currencyFromValue').value='';
+            document.getElementById('currencyToValue').value='';
+        }
+
+        async function getCurrencies() {
+            let date = document.getElementById("dates").value;
+            let currencyFromId = document.getElementById('currencyFrom');
+            let currencyToId = document.getElementById('currencyTo');
+            let url = host + '/get-currencies-for-date?date=' + date;
+            let response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            await response.json().then(function (data) {
+                data.forEach(currency => {
+                    addCurrencyFrom(currency, currencyFromId);
+                    addCurrencyTo(currency, currencyToId);
+                })
+            });
+            await getRate();
+        }
+
+        async function getDates() {
+            let dateElement = document.getElementById("dates");
+            let url = host + '/get-dates';
+            let response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            await response.json().then(function (data) {
+                data.forEach(date => addDate(date, dateElement))
+            });
+        }
+
+        function addDate(date, dateElement) {
+            let option = document.createElement("option");
+            option.value = date;
+            option.text = date;
+            dateElement.appendChild(option);
+        }
+
+        function addCurrencyFrom(currency, currencyFromElement) {
+            let option = document.createElement("option");
+            option.value = currency.id;
+            option.text = currency.shortName + '(' + currency.name + ')';
+            currencyFromElement.appendChild(option);
+        }
+
+        function addCurrencyTo(currency, currencyToElement) {
+            let option = document.createElement("option");
+            option.value = currency.id;
+            option.text = currency.shortName + '(' + currency.name + ')';
+            currencyToElement.appendChild(option);
+        }
+
+        function convertCurrencyFromToCurrencyTo() {
+            let currencyFromValue = document.getElementById('currencyFromValue').value;
+            let currencyTo = document.getElementById('currencyToValue');
+            if (currencyFromValue > 0) {
+                currencyTo.value = currencyFromValue * rate;
+            }
+        }
+
+        function convertCurrencyToToCurrencyFrom() {
+            let currencyFrom = document.getElementById('currencyFromValue');
+            let currencyToValue = document.getElementById('currencyToValue').value;
+            if (currencyToValue > 0) {
+                currencyFrom.value = currencyToValue / rate;
+            }
+        }
+
+        async function loadStartContent() {
+            await getDates();
+            await getCurrencies();
+        }
+    </script>
+</head>
+<body onload="loadStartContent()">
+<header>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <a class="navbar-brand" href="/">Конвертация валют</a>
+        </div>
+    </nav>
+</header>
+<div class="container">
+    <div class="row m-3">
+        <div class="col">
+        </div>
+        <div class="col" th:align="center">
+            <label th:for="date">Дата</label>
+        </div>
+        <div class="col">
+        </div>
+    </div>
+    <div class="row m-3">
+        <div class="col">
+            <select class="form-select" id="currencyFrom" onchange="getRate()">
+            </select>
+        </div>
+        <div class="col">
+            <select class="form-select" id="dates" onchange="getCurrencies()">
+            </select>
+        </div>
+        <div class="col">
+            <select class="form-select" id="currencyTo" onchange="getRate()">
+            </select>
+        </div>
+    </div>
+    <div class="row m-3">
+        <div class="col" align="center">
+            <input type="number" min="0" id="currencyFromValue" class="form-control" onkeyup="convertCurrencyFromToCurrencyTo()"/>
+        </div>
+        <div class="col"></div>
+        <div class="col" align="center">
+            <input type="number" min="0" id="currencyToValue" class="form-control" onkeyup="convertCurrencyToToCurrencyFrom()"/>
+        </div>
+    </div>
+</div>
+</body>
+</html>

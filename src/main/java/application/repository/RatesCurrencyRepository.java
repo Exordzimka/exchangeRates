@@ -24,6 +24,9 @@ public interface RatesCurrencyRepository extends JpaRepository<RatesCurrency, Ra
     @Query("SELECT distinct rates_currency.ratesCurrencyPK.date FROM RatesCurrency rates_currency ORDER BY 1 desc ")
     List<String> findAllDates();
 
+    @Query("SELECT max(rates_currency.ratesCurrencyPK.date) FROM RatesCurrency rates_currency")
+    String findLastDate();
+
     default void addRatesCurrency(JdbcTemplate jdbcTemplate, List<RatesCurrency> ratesCurrency) {
         jdbcTemplate.batchUpdate("insert into rates_currency (date, base_currency_id, currency_to_id, rate) values (?,?,?,?)",
                 new BatchPreparedStatementSetter() {

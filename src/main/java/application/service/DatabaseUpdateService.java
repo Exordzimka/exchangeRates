@@ -2,6 +2,8 @@ package application.service;
 
 import java.io.IOException;
 import java.sql.Date;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -52,7 +54,7 @@ public class DatabaseUpdateService {
 
     @Scheduled(fixedDelayString = "${database.update.delay.in.milliseconds}")
     public void updateDatabase() throws IOException, SAXException, ParserConfigurationException {
-        String lastDate = ratesCurrencyRepository.findAllDates().get(0);
+        String lastDate = ratesCurrencyRepository.findLastDate();
         String nextDate = getNextDate(lastDate);
         XmlParser xmlParser = createParser(getDataFromCbr(dateViewConverterForRequest.convertDate(nextDate)));
         while (!inDatabaseLastRates(lastDate, xmlParser.parseDateOfRates())) {
@@ -67,7 +69,7 @@ public class DatabaseUpdateService {
                 ratesCurrencies.add(new RatesCurrency(ratesCurrencyPK, baseCurrencyId, rate));
             }
             ratesCurrencyRepository.addRatesCurrency(jdbcTemplate, ratesCurrencies);
-            lastDate = ratesCurrencyRepository.findAllDates().get(0);
+            lastDate = ratesCurrencyRepository.findLastDate();
             nextDate = getNextDate(nextDate);
             xmlParser = createParser(getDataFromCbr(nextDate));
         }
@@ -87,9 +89,13 @@ public class DatabaseUpdateService {
     }
 
     private boolean inDatabaseLastRates(String lastDateFromDatabase, String dateFromCbr) {
-        if(dateFromCbr == null)
-            return true;
-        return dateViewConverterForRequest.convertDate(lastDateFromDatabase).compareToIgnoreCase(dateViewConverterForRequest.convertDate(dateFromCbr))>=0;
+        try {
+            return LocalDate.parse(dateViewConverterForDatabase.convertDate(lastDateFromDatabase))
+                    .compareTo(LocalDate.parse(dateViewConverterForDatabase.convertDate(dateFromCbr))) >= 0;
+        }
+        catch (DateTimeParseException exception){
+            return false;
+        }
     }
 
     private String getNextDate(String date) {
